@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Sistema de Empeños</title>
+    <style>
+    :root {
+        /* Variables de color para mantener un diseño consistente y profesional */
+        --bg-soft: #f0f7ff;          /* Azul muy pálido para el fondo */
+        --card-bg: #ffffff;
+        --accent-pastel: #b3d1ff;    /* Azul pastel principal */
+        --accent-hover: #a1c4fd;     /* Azul un poco más saturado */
+        --text-deep: #4a5568;        /* Gris azulado oscuro para lectura */
+        --text-light: #718096;       /* Gris azulado suave */
+        --input-border: #e2e8f0;
+    }
+
+    /* Centra la tarjeta de login exactamente en medio de la pantalla */
+    body { 
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center;
+        min-height: 100vh; /* 100vh significa el 100% de la altura de la ventana */
+        margin: 0;
+        background-color: var(--bg-soft); 
+        color: var(--text-deep);
+    }
+
+    /* Estilo de la "tarjeta" blanca que contiene el formulario */
+    .card { 
+        background: var(--card-bg); 
+        padding: 2.5rem; 
+        border-radius: 20px; 
+        /* Sombra con un toque azul para dar profundidad */
+        box-shadow: 0 10px 30px rgba(179, 209, 255, 0.3); 
+        width: 100%;
+        max-width: 380px; 
+        transition: all 0.3s ease;
+    }
+
+    h2 { 
+        text-align: center; 
+        color: #5a7fb2; 
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.5px; /* Junta un poco las letras para un look moderno */
+    }
+
+    /* Estilos para los campos de texto y contraseña */
+    input { 
+        width: 100%; 
+        padding: 14px; 
+        margin: 10px 0 18px 0; 
+        border: 2px solid var(--input-border); 
+        border-radius: 12px; 
+        /* box-sizing: border-box asegura que el padding no "infle" el ancho del input */
+        box-sizing: border-box; 
+        font-size: 0.95rem;
+        background-color: #f9fbff;
+        transition: border-color 0.3s, box-shadow 0.3s;
+        outline: none; /* Quita el borde azul feo por defecto del navegador */
+    }
+
+    /* Efecto cuando el usuario hace clic para escribir en el input */
+    input:focus {
+        border-color: var(--accent-pastel);
+        box-shadow: 0 0 0 4px rgba(179, 209, 255, 0.25);
+        background-color: #fff;
+    }
+
+    button { 
+        width: 100%; 
+        padding: 14px; 
+        cursor: pointer; 
+        border-radius: 12px; 
+        border: none; 
+        font-weight: 700; 
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Botón principal (Entrar/Registrarse) */
+    .btn-primary { 
+        background-color: var(--accent-pastel); 
+        color: #4a6fa5; 
+    }
+
+    .btn-primary:hover { 
+        background-color: var(--accent-hover);
+        transform: translateY(-2px); /* Efecto de flotación */
+        box-shadow: 0 5px 15px rgba(179, 209, 255, 0.4);
+    }
+
+    /* Botón secundario (Ir a registro/Volver) */
+    .btn-secondary { 
+        background: transparent; 
+        color: var(--text-light); 
+        margin-top: 12px; 
+        border: 1px dashed var(--accent-pastel); /* Borde punteado */
+    }
+
+    .btn-secondary:hover { 
+        background: rgba(179, 209, 255, 0.1);
+        color: #4a6fa5;
+    }
+
+    p { 
+        font-size: 0.85rem; 
+        color: var(--text-light); 
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    /* .hidden: Esta clase se usa en JavaScript para ocultar elementos (display: none) */
+    .hidden { display: none; }
+</style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="seccion-login">
+            <h2>Iniciar Sesión</h2>
+            <form id="form-login">
+                <input type="email" id="login-email" placeholder="Correo" required>
+                <input type="password" id="login-password" placeholder="Contraseña" required>
+                <button type="submit" class="btn-primary">Entrar al Sistema</button>
+            </form>
+            <p style="text-align:center">¿No tienes cuenta?</p>
+            <button id="btn-ir-a-registro" class="btn-secondary">Crear una cuenta</button>
+        </div>
+
+        <div id="seccion-registro" class="hidden">
+            <h2>Crear Cuenta</h2>
+            <form id="form-registro">
+                <input type="text" id="reg-nombre" placeholder="Nombre completo" required>
+                <input type="number" id="reg-edad" placeholder="Edad" required>
+                <input type="email" id="reg-email" placeholder="Correo" required>
+                <input type="password" id="reg-password" placeholder="Contraseña (6+ caracteres)" required>
+                <button type="submit" class="btn-primary">Registrarse</button>
+            </form>
+            <button id="btn-volver-a-login" class="btn-secondary">Volver al Inicio</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importación de funciones de autenticación y base de datos
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Configuración de tu proyecto en Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB_JUVYuVwZhRMH_Sw3RTTw4Va8sTW7imU",
+            authDomain: "prestamo-58f97.firebaseapp.com",
+            projectId: "prestamo-58f97",
+            storageBucket: "prestamo-58f97.firebasestorage.app",
+            messagingSenderId: "285443992814",
+            appId: "1:285443992814:web:4c7473c2afba3bd4bfd7ff"
+        };
+
+        // Inicio de los servicios
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const loginDiv = document.getElementById('seccion-login');
+        const registroDiv = document.getElementById('seccion-registro');
+
+        // --- LÓGICA DE INTERFAZ (Alternar vistas) ---
+        // Al hacer clic en "Crear cuenta", oculta el login y muestra el registro
+        document.getElementById('btn-ir-a-registro').onclick = () => {
+            loginDiv.classList.add('hidden');
+            registroDiv.classList.remove('hidden');
+        };
+
+        // Al hacer clic en "Volver", oculta el registro y muestra el login
+        document.getElementById('btn-volver-a-login').onclick = () => {
+            registroDiv.classList.add('hidden');
+            loginDiv.classList.remove('hidden');
+        };
+
+        // --- REGISTRO DE USUARIOS ---
+        document.getElementById('form-registro').onsubmit = async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('reg-nombre').value;
+            const edad = document.getElementById('reg-edad').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+
+            try {
+                // 1. Crea el usuario en el sistema de autenticación de Firebase (Email/Password)
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                const user = userCredential.user;
+
+                // 2. Guarda los datos adicionales (Nombre, Edad, Rol) en la base de datos Firestore
+                // Usamos el uid (ID único) generado por Firebase para nombrar el documento
+                await setDoc(doc(db, "usuarios", user.uid), {
+                    nombre: nombre,
+                    edad: parseInt(edad),
+                    correo: email,
+                    rol: "Cajero", // Por defecto, los nuevos registros son cajeros
+                    fechaCreado: new Date()
+                });
+
+                alert("¡Cuenta creada con éxito!");
+                e.target.reset(); // Limpia los campos del formulario
+                registroDiv.classList.add('hidden');
+                loginDiv.classList.remove('hidden');
+
+            } catch (error) {
+                // Manejo de errores (ej: contraseña muy corta, correo ya usado)
+                alert("Error al registrar: " + error.message);
+            }
+        };
+
+        // --- LOGIN CON REDIRECCIÓN SEGÚN ROL ---
+        document.getElementById('form-login').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+
+            try {
+                // 1. Verifica que el correo y contraseña existan en Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                const user = userCredential.user;
+
+                // 2. Consulta la base de datos (Firestore) para ver qué ROL tiene este usuario
+                const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+
+                if (docSnap.exists()) {
+                    const datosUsuario = docSnap.data();
+                    // .toLowerCase() convierte el texto a minúsculas para comparar sin errores de dedo
+                    const rol = datosUsuario.rol ? datosUsuario.rol.toLowerCase() : "cajero";
+                    const nombre = datosUsuario.nombre;
+
+                    alert(`¡Bienvenido ${rol.toUpperCase()}: ${nombre}!`);
+
+                    // 3. REDIRECCIÓN LÓGICA:
+                    // window.location.href le dice al navegador que se mueva a otra página
+                    if (rol === "admin") {
+                        // Si en la base de datos dice "admin", va al panel total
+                        window.location.href = "adminindex.html"; 
+                    } else {
+                        // Si dice "cajero" u otra cosa, va al panel limitado de empleados
+                        window.location.href = "empleadoindex.html"; 
+                    }
+                } else {
+                    alert("No existe un perfil de datos para este usuario.");
+                    await signOut(auth); // Cierra sesión si el usuario existe en Auth pero no en la DB
+                }
+
+            } catch (error) {
+                // Error común: correo no registrado o contraseña mal escrita
+                console.error(error);
+                alert("Credenciales incorrectas o error de conexión.");
+            }
+        };
+    </script>
+</body>
+</html>

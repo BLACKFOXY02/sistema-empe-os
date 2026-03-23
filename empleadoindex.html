@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Empeños - Motor Completo</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.4; padding: 20px; }
+        section { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
+        button { cursor: pointer; padding: 5px 10px; margin: 2px; }
+        .reporte-item { border-bottom: 1px solid #ddd; padding: 5px 0; }
+        
+        .card-seleccion { 
+            border: 1px solid #007bff; 
+            padding: 10px; 
+            margin: 5px 0; 
+            cursor: pointer; 
+            background: #f9f9f9;
+        }
+        .card-seleccion:hover { background: #eef; }
+        input:invalid { border: 2px solid red; }
+
+        /* Estilos para el ticket */
+        #ticket-panel {
+            background: #fef7e0;
+            border: 2px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-family: monospace;
+            display: none;
+        }
+        #ticket-panel h3 {
+            margin-top: 0;
+            color: #28a745;
+            text-align: center;
+        }
+        .ticket-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #aaa;
+        }
+        .ticket-total {
+            font-weight: bold;
+            font-size: 1.2em;
+            background: #d4edda;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        #btn-cerrar-ticket {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: block;
+            margin: 10px auto 0;
+        }
+        /* Estilo para la lista de tickets */
+        .ticket-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+        }
+        .btn-descargar {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        /* Estilo para el QR */
+        #ticket-qr {
+            text-align: center;
+            margin-top: 15px;
+        }
+        /* Selector de idiomas */
+        .language-selector {
+            position: fixed;
+            top: 10px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .language-selector select {
+            padding: 5px;
+            font-size: 14px;
+        }
+        /* Estilos para el modal de gráficas */
+        .modal-graficas {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-graficas-content {
+            background: white;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-graficas-content h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .grafica-controls {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        .grafica-controls select {
+            padding: 8px;
+            margin: 0 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .grafica-controls label {
+            font-weight: bold;
+        }
+        .grafica-container {
+            margin-top: 20px;
+            min-height: 400px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 400px;
+        }
+        .btn-cerrar-modal {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: block;
+            width: 100px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .metric-selector {
+            margin-bottom: 15px;
+        }
+        /* Estilos para la cámara */
+        .camera-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        #video {
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            background: #000;
+        }
+        #foto-preview {
+            max-width: 200px;
+            max-height: 150px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+        .camera-buttons {
+            margin-top: 10px;
+        }
+        .btn-camera {
+            background-color: #007bff;
+            color: white;
+            padding: 5px 10px;
+            margin-right: 10px;
+        }
+        .ticket-foto-img {
+            max-width: 200px;
+            max-height: 150px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+    <!-- Incluir jsPDF y librería para QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <!-- Incluir Chart.js para gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- Selector de idiomas -->
+    <div class="language-selector">
+        <select id="language-select">
+            <option value="es">🇪🇸 Español</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="de">🇩🇪 Deutsch</option>
+        </select>
+    </div>
+
+    <header>
+        <strong id="header-user-label">Usuario:</strong> <span id="user-display-name">Cargando...</span> | 
+        <button id="btn-logout">Cerrar Sesión</button>
+    </header>
+
+    <hr>
+
+    <!-- Panel de Ticket (oculto inicialmente) -->
+    <div id="ticket-panel">
+        <h3 id="ticket-title">🎫 TICKET DE EMPEÑO</h3>
+        <div id="ticket-contenido"></div>
+        <div id="ticket-qr"></div>
+        <div id="ticket-foto" style="text-align: center; margin-top: 10px;"></div>
+        <button id="btn-cerrar-ticket">Cerrar Ticket</button>
+    </div>
+
+    <section>
+        <h2 id="section-search-title">Buscador y Consultar Historial (RF-7 / CU-4)</h2>
+        <input type="text" id="input-busqueda" placeholder="Nombre de cliente o Folio...">
+        <button id="btn-buscar">Buscar</button>
+
+        <div id="lista-resultados" style="display:none; margin-top:10px; border: 2px dashed #007bff; padding: 10px;">
+            <strong id="results-label">Se encontraron varios contratos activos. Haz clic en uno:</strong>
+            <div id="contenedor-cards"></div>
+        </div>
+    </section>
+
+    <section id="apartado-pago" style="display:none; background-color: #e2f3f5; padding: 15px; border: 2px solid #007bff; margin-top: 10px;">
+        <h3 id="payment-title">Panel de Pago y Entrega</h3>
+        <p><strong id="folio-label">Folio:</strong> <strong id="folio-operacion"></strong> | <strong id="client-label">Cliente:</strong> <strong id="cliente-operacion"></strong></p>
+        <p><strong id="article-label">Artículo:</strong> <em id="articulo-operacion"></em></p>
+        <p><strong id="total-label">Total para Liquidar (Capital + Interés):</strong> <strong id="total-cobrar"></strong></p>
+        <p><strong id="interest-label">Solo Interés (Refrendo):</strong> <strong id="interes-cobrar"></strong></p>
+        
+        <hr>
+        <label id="amount-label">Monto recibido para Abono manual ($):</label>
+        <input type="number" id="monto-recibido" placeholder="Ej: 500">
+        
+        <div style="margin-top: 10px;">
+            <button id="btn-liquidar" style="background-color: #28a745; color: white; font-weight: bold; padding: 10px;">CU-3: LIQUIDAR (Finalizar y Entregar)</button>
+            <button id="btn-abono-refrendo" style="background-color: #ffc107;">CU-2: PAGAR REFRENDO / ABONO</button>
+            <button id="btn-remate" style="background-color: #dc3545; color: white;">CU-5: EJECUTAR REMATE</button>
+            
+            <button id="btn-volver-lista" style="display:none; background-color: #6c757d; color: white; font-weight: bold;">⬅️ Volver a resultados</button>
+            
+            <button onclick="document.getElementById('apartado-pago').style.display='none'" id="close-panel-btn">Cerrar Panel</button>
+        </div>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2 id="new-pawn-title">Realizar Nuevo Empeño (CU-1)</h2>
+        <form id="form-registro">
+            <div style="margin-bottom: 10px;">
+                <input type="text" id="nom-cli" placeholder="Nombre completo" required>
+                <input type="text" id="id-cli" placeholder="No. INE (13 dígitos)" minlength="13" maxlength="13" required>
+                <input type="tel" id="tel-cli" placeholder="Teléfono (10 dígitos, opcional)" pattern="[0-9]{10}">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <textarea id="art-desc" placeholder="Descripción detallada del artículo..." style="width: 100%; max-width: 500px;" required></textarea>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <input type="number" id="monto-p" placeholder="Monto a prestar $" required>
+                <p id="display-calculo">Cargando tasa de interés...</p>
+            </div>
+            
+            <!-- Sección de cámara para tomar foto -->
+            <div class="camera-section">
+                <label>📸 Tomar foto del artículo:</label>
+                <div>
+                    <video id="video" autoplay playsinline style="width: 100%; max-width: 400px;"></video>
+                </div>
+                <div class="camera-buttons">
+                    <button type="button" id="btn-activar-camara" class="btn-camera">📷 Activar Cámara</button>
+                    <button type="button" id="btn-tomar-foto" class="btn-camera" style="display:none;">📸 Tomar Foto</button>
+                    <button type="button" id="btn-cancelar-camara" class="btn-camera" style="display:none;">❌ Cancelar</button>
+                </div>
+                <canvas id="canvas-foto" style="display:none;"></canvas>
+                <div id="foto-preview-container">
+                    <img id="foto-preview" alt="Vista previa de la foto">
+                </div>
+            </div>
+            
+            <button type="submit" id="generate-contract-btn">RF-5: GENERAR CONTRATO</button>
+        </form>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2 id="reports-title">Reportes e Inventario (RF-9, 11, 12)</h2>
+        <button id="btn-inventario">RF-12: Inventario en Bodega</button>
+        <button id="btn-vencimientos">RF-11: Alertas Vencidas</button>
+        <button id="btn-ver-remates">CU-5: Lista de Remates</button>
+        <button id="btn-caja">RF-9: Cierre de Caja</button>
+        <button id="btn-tickets">Tickets</button>
+        <button id="btn-exportar-contratos">Exportar Contratos a Excel</button>
+        <!-- Nuevo botón Gráficas -->
+        <button id="btn-graficas">📊 Ver Gráficas</button>
+        
+        <div id="display-reportes" style="margin-top:10px; background:#fff3cd; padding:15px; border: 1px solid #ffeeba; min-height: 50px;">
+            <em id="reports-placeholder">Aquí se mostrarán los reportes seleccionados...</em>
+        </div>
+    </section>
+
+    <!-- Modal de Gráficas -->
+    <div id="modal-graficas" class="modal-graficas">
+        <div class="modal-graficas-content">
+            <h3 id="graficas-title">📊 Panel de Gráficas</h3>
+            <div class="grafica-controls">
+                <div class="metric-selector">
+                    <label id="metric-label">Seleccionar métrica:</label>
+                    <select id="metric-select">
+                        <option value="estados">📊 Contratos por Estado</option>
+                        <option value="evolucion">📈 Evolución de Empeños en el Tiempo</option>
+                        <option value="montos">💰 Distribución de Montos Prestados</option>
+                        <option value="topclientes">🏆 Top Clientes (más empeños)</option>
+                        <option value="pagos">💵 Proporción de Pagos vs Deuda</option>
+                    </select>
+                </div>
+                <div>
+                    <label id="chart-type-label">Tipo de gráfica:</label>
+                    <select id="chart-type-select">
+                        <option value="bar">Barras</option>
+                        <option value="line">Línea</option>
+                        <option value="pie">Torta (Pie)</option>
+                        <option value="doughnut">Dona (Donut)</option>
+                        <option value="radar">Radar</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grafica-container">
+                <canvas id="grafica-canvas"></canvas>
+            </div>
+            <button id="btn-cerrar-modal" class="btn-cerrar-modal">Cerrar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, getDoc, getDocs, query, where, updateDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB_JUVYuVwZhRMH_Sw3RTTw4Va8sTW7imU",
+            authDomain: "prestamo-58f97.firebaseapp.com",
+            projectId: "prestamo-58f97",
+            storageBucket: "prestamo-58f97.firebasestorage.app",
+            messagingSenderId: "285443992814",
+            appId: "1:285443992814:web:4c7473c2afba3bd4bfd7ff"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- VARIABLES GLOBALES ---
+        let idSeleccionado = ""; 
+        let datosSeleccionados = null;
+        let tasaInteresActual = 10; 
+        let nombreUsuarioActual = "";
+        let rolUsuarioActual = "";
+        let currentLang = 'es';
+        let chartInstance = null;
+        
+        // Variables para la cámara
+        let stream = null;
+        let fotoTomada = null; // Almacena la foto en base64
+        let fotoFolioActual = null; // Almacena el folio para recuperar la foto después
+        
+        // Diccionario de traducciones (se mantiene igual que el original)
+        const translations = {
+            es: {
+                user: "Usuario:",
+                close: "Cerrar",
+                ticketTitle: "🎫 TICKET DE EMPEÑO",
+                closeTicket: "Cerrar Ticket",
+                searchTitle: "Buscador y Consultar Historial (RF-7 / CU-4)",
+                searchPlaceholder: "Nombre de cliente o Folio...",
+                search: "Buscar",
+                resultsFound: "Se encontraron varios contratos activos. Haz clic en uno:",
+                paymentTitle: "Panel de Pago y Entrega",
+                folio: "Folio:",
+                client: "Cliente:",
+                article: "Artículo:",
+                total: "Total para Liquidar (Capital + Interés):",
+                interest: "Solo Interés (Refrendo):",
+                amountReceived: "Monto recibido para Abono manual ($):",
+                liquidate: "CU-3: LIQUIDAR (Finalizar y Entregar)",
+                payRenew: "CU-2: PAGAR REFRENDO / ABONO",
+                auction: "CU-5: EJECUTAR REMATE",
+                backToList: "⬅️ Volver a resultados",
+                closePanel: "Cerrar Panel",
+                newPawn: "Realizar Nuevo Empeño (CU-1)",
+                namePlaceholder: "Nombre completo",
+                inePlaceholder: "No. INE (13 dígitos)",
+                phonePlaceholder: "Teléfono (10 dígitos, opcional)",
+                articlePlaceholder: "Descripción detallada del artículo...",
+                amountPlaceholder: "Monto a prestar $",
+                generateContract: "RF-5: GENERAR CONTRATO",
+                reports: "Reportes e Inventario (RF-9, 11, 12)",
+                inventory: "RF-12: Inventario en Bodega",
+                expired: "RF-11: Alertas Vencidas",
+                auctionList: "CU-5: Lista de Remates",
+                cashier: "RF-9: Cierre de Caja",
+                tickets: "Tickets",
+                exportContracts: "Exportar Contratos a Excel",
+                graficas: "📊 Ver Gráficas",
+                reportsPlaceholder: "Aquí se mostrarán los reportes seleccionados...",
+                graficasTitle: "📊 Panel de Gráficas",
+                metricLabel: "Seleccionar métrica:",
+                chartTypeLabel: "Tipo de gráfica:",
+                estados: "📊 Contratos por Estado",
+                evolucion: "📈 Evolución de Empeños en el Tiempo",
+                montos: "💰 Distribución de Montos Prestados",
+                topclientes: "🏆 Top Clientes (más empeños)",
+                pagos: "💵 Proporción de Pagos vs Deuda",
+                // Ticket labels
+                folioTicket: "Folio:",
+                clientTicket: "Cliente:",
+                articleTicket: "Artículo:",
+                amountTicket: "Monto prestado:",
+                interestTicket: "Interés",
+                totalTicket: "Total a pagar al vencimiento (30 días):",
+                dateStart: "Fecha de inicio:",
+                dateDue: "Fecha de vencimiento:",
+                term: "Plazo:",
+                attendedBy: "Atendido por:",
+                ticketFooter: "¡Guarde este ticket para cualquier gestión! Puede realizar abonos parciales en cualquier momento.",
+                days30: "30 días",
+                notAvailable: "No disponible",
+                interestRate: "Interés",
+                totalPay: "Total a pagar:",
+                emissionDate: "Fecha de emisión:",
+                dueDate: "Fecha de vencimiento:",
+                termLabel: "Plazo:",
+                // PDF
+                pdfTitle: "TICKET DE EMPEÑO",
+                pdfInterest: "Interés",
+                pdfTotal: "Total a pagar:",
+                pdfTerm: "Plazo: 30 días",
+                pdfAttended: "Atendido por:",
+                pdfPhoto: "Foto del artículo:",
+                // QR data
+                qrFolio: "Folio:",
+                qrClient: "Cliente:",
+                qrArticle: "Artículo:",
+                qrAmount: "Monto:",
+                qrInterest: "Interés:",
+                qrTotal: "Total:",
+                qrDate: "Fecha:",
+                qrDue: "Vencimiento:",
+                qrAttended: "Atendido por:"
+            },
+            en: {
+                user: "User:",
+                close: "Close",
+                ticketTitle: "🎫 PAWN TICKET",
+                closeTicket: "Close Ticket",
+                searchTitle: "Search and History (RF-7 / CU-4)",
+                searchPlaceholder: "Customer name or Folio...",
+                search: "Search",
+                resultsFound: "Several active contracts found. Click on one:",
+                paymentTitle: "Payment and Delivery Panel",
+                folio: "Folio:",
+                client: "Customer:",
+                article: "Item:",
+                total: "Total to Liquidate (Principal + Interest):",
+                interest: "Interest Only (Renewal):",
+                amountReceived: "Amount received for manual payment ($):",
+                liquidate: "CU-3: LIQUIDATE (Finalize and Deliver)",
+                payRenew: "CU-2: PAY RENEWAL / PAYMENT",
+                auction: "CU-5: EXECUTE AUCTION",
+                backToList: "⬅️ Back to results",
+                closePanel: "Close Panel",
+                newPawn: "New Pawn (CU-1)",
+                namePlaceholder: "Full name",
+                inePlaceholder: "ID Number (13 digits)",
+                phonePlaceholder: "Phone (10 digits, optional)",
+                articlePlaceholder: "Detailed item description...",
+                amountPlaceholder: "Loan amount $",
+                generateContract: "RF-5: GENERATE CONTRACT",
+                reports: "Reports and Inventory (RF-9, 11, 12)",
+                inventory: "RF-12: Warehouse Inventory",
+                expired: "RF-11: Expired Alerts",
+                auctionList: "CU-5: Auction List",
+                cashier: "RF-9: Cash Close",
+                tickets: "Tickets",
+                exportContracts: "Export Contracts to Excel",
+                graficas: "📊 View Charts",
+                reportsPlaceholder: "Selected reports will appear here...",
+                graficasTitle: "📊 Charts Panel",
+                metricLabel: "Select metric:",
+                chartTypeLabel: "Chart type:",
+                estados: "📊 Contracts by Status",
+                evolucion: "📈 Pawn Evolution Over Time",
+                montos: "💰 Loan Amount Distribution",
+                topclientes: "🏆 Top Clients (most pawns)",
+                pagos: "💵 Payment vs Debt Ratio",
+                // Ticket labels
+                folioTicket: "Folio:",
+                clientTicket: "Customer:",
+                articleTicket: "Item:",
+                amountTicket: "Loan amount:",
+                interestTicket: "Interest",
+                totalTicket: "Total to pay at maturity (30 days):",
+                dateStart: "Start date:",
+                dateDue: "Due date:",
+                term: "Term:",
+                attendedBy: "Served by:",
+                ticketFooter: "Keep this ticket for any management! You can make partial payments at any time.",
+                days30: "30 days",
+                notAvailable: "Not available",
+                interestRate: "Interest",
+                totalPay: "Total to pay:",
+                emissionDate: "Issue date:",
+                dueDate: "Due date:",
+                termLabel: "Term:",
+                // PDF
+                pdfTitle: "PAWN TICKET",
+                pdfInterest: "Interest",
+                pdfTotal: "Total to pay:",
+                pdfTerm: "Term: 30 days",
+                pdfAttended: "Served by:",
+                pdfPhoto: "Item photo:",
+                // QR data
+                qrFolio: "Folio:",
+                qrClient: "Customer:",
+                qrArticle: "Item:",
+                qrAmount: "Amount:",
+                qrInterest: "Interest:",
+                qrTotal: "Total:",
+                qrDate: "Date:",
+                qrDue: "Due date:",
+                qrAttended: "Served by:"
+            },
+            pt: {
+                user: "Usuário:",
+                close: "Fechar",
+                ticketTitle: "🎫 TICKET DE PENHOR",
+                closeTicket: "Fechar Ticket",
+                searchTitle: "Pesquisar e Consultar Histórico (RF-7 / CU-4)",
+                searchPlaceholder: "Nome do cliente ou Folio...",
+                search: "Buscar",
+                resultsFound: "Vários contratos ativos encontrados. Clique em um:",
+                paymentTitle: "Painel de Pagamento e Entrega",
+                folio: "Folio:",
+                client: "Cliente:",
+                article: "Artigo:",
+                total: "Total para Liquidar (Capital + Juros):",
+                interest: "Apenas Juros (Renovação):",
+                amountReceived: "Valor recebido para pagamento manual ($):",
+                liquidate: "CU-3: LIQUIDAR (Finalizar e Entregar)",
+                payRenew: "CU-2: PAGAR RENOVAÇÃO / ABONO",
+                auction: "CU-5: EXECUTAR LEILÃO",
+                backToList: "⬅️ Voltar aos resultados",
+                closePanel: "Fechar Painel",
+                newPawn: "Novo Penhor (CU-1)",
+                namePlaceholder: "Nome completo",
+                inePlaceholder: "Nº ID (13 dígitos)",
+                phonePlaceholder: "Telefone (10 dígitos, opcional)",
+                articlePlaceholder: "Descrição detalhada do artigo...",
+                amountPlaceholder: "Valor do empréstimo $",
+                generateContract: "RF-5: GERAR CONTRATO",
+                reports: "Relatórios e Inventário (RF-9, 11, 12)",
+                inventory: "RF-12: Inventário no Depósito",
+                expired: "RF-11: Alertas Vencidos",
+                auctionList: "CU-5: Lista de Leilões",
+                cashier: "RF-9: Fechamento de Caixa",
+                tickets: "Tickets",
+                exportContracts: "Exportar Contratos para Excel",
+                graficas: "📊 Ver Gráficos",
+                reportsPlaceholder: "Os relatórios selecionados aparecerão aqui...",
+                graficasTitle: "📊 Painel de Gráficos",
+                metricLabel: "Selecionar métrica:",
+                chartTypeLabel: "Tipo de gráfico:",
+                estados: "📊 Contratos por Estado",
+                evolucion: "📈 Evolução de Penhores no Tempo",
+                montos: "💰 Distribuição de Valores",
+                topclientes: "🏆 Top Clientes (mais penhores)",
+                pagos: "💵 Proporção de Pagamentos vs Dívida",
+                // Ticket labels (mantener igual)
+                folioTicket: "Folio:",
+                clientTicket: "Cliente:",
+                articleTicket: "Artigo:",
+                amountTicket: "Valor do empréstimo:",
+                interestTicket: "Juros",
+                totalTicket: "Total a pagar no vencimento (30 dias):",
+                dateStart: "Data de início:",
+                dateDue: "Data de vencimento:",
+                term: "Prazo:",
+                attendedBy: "Atendido por:",
+                ticketFooter: "Guarde este ticket para qualquer gestão! Você pode fazer pagamentos parciais a qualquer momento.",
+                days30: "30 dias",
+                notAvailable: "Não disponível",
+                interestRate: "Juros",
+                totalPay: "Total a pagar:",
+                emissionDate: "Data de emissão:",
+                dueDate: "Data de vencimento:",
+                termLabel: "Prazo:",
+                pdfTitle: "TICKET DE PENHOR",
+                pdfInterest: "Juros",
+                pdfTotal: "Total a pagar:",
+                pdfTerm: "Prazo: 30 dias",
+                pdfAttended: "Atendido por:",
+                pdfPhoto: "Foto do artigo:",
+                qrFolio: "Folio:",
+                qrClient: "Cliente:",
+                qrArticle: "Artigo:",
+                qrAmount: "Valor:",
+                qrInterest: "Juros:",
+                qrTotal: "Total:",
+                qrDate: "Data:",
+                qrDue: "Vencimento:",
+                qrAttended: "Atendido por:"
+            },
+            fr: {
+                user: "Utilisateur:",
+                close: "Fermer",
+                ticketTitle: "🎫 TICKET DE NANTISSEMENT",
+                closeTicket: "Fermer Ticket",
+                searchTitle: "Recherche et Historique (RF-7 / CU-4)",
+                searchPlaceholder: "Nom du client ou Folio...",
+                search: "Rechercher",
+                resultsFound: "Plusieurs contrats actifs trouvés. Cliquez sur un:",
+                paymentTitle: "Panneau de Paiement et Livraison",
+                folio: "Folio:",
+                client: "Client:",
+                article: "Article:",
+                total: "Total à Liquider (Capital + Intérêts):",
+                interest: "Intérêts Seulement (Renouvellement):",
+                amountReceived: "Montant reçu pour paiement manuel ($):",
+                liquidate: "CU-3: LIQUIDER (Finaliser et Livrer)",
+                payRenew: "CU-2: PAYER RENOUVELLEMENT / VERSEMENT",
+                auction: "CU-5: EXÉCUTER VENTE AUX ENCHÈRES",
+                backToList: "⬅️ Retour aux résultats",
+                closePanel: "Fermer Panneau",
+                newPawn: "Nouveau Nantissement (CU-1)",
+                namePlaceholder: "Nom complet",
+                inePlaceholder: "N° ID (13 chiffres)",
+                phonePlaceholder: "Téléphone (10 chiffres, optionnel)",
+                articlePlaceholder: "Description détaillée de l'article...",
+                amountPlaceholder: "Montant du prêt $",
+                generateContract: "RF-5: GÉNÉRER CONTRAT",
+                reports: "Rapports et Inventaire (RF-9, 11, 12)",
+                inventory: "RF-12: Inventaire en Entrepôt",
+                expired: "RF-11: Alertes Expirées",
+                auctionList: "CU-5: Liste des Enchères",
+                cashier: "RF-9: Clôture de Caisse",
+                tickets: "Tickets",
+                exportContracts: "Exporter les Contrats vers Excel",
+                graficas: "📊 Voir Graphiques",
+                reportsPlaceholder: "Les rapports sélectionnés apparaîtront ici...",
+                graficasTitle: "📊 Panneau Graphiques",
+                metricLabel: "Sélectionner métrique:",
+                chartTypeLabel: "Type de graphique:",
+                estados: "📊 Contrats par État",
+                evolucion: "📈 Évolution des Nantissements",
+                montos: "💰 Distribution des Montants",
+                topclientes: "🏆 Top Clients",
+                pagos: "💵 Proportion Paiements vs Dette",
+                // Ticket labels (mantener igual)
+                folioTicket: "Folio:",
+                clientTicket: "Client:",
+                articleTicket: "Article:",
+                amountTicket: "Montant du prêt:",
+                interestTicket: "Intérêts",
+                totalTicket: "Total à payer à échéance (30 jours):",
+                dateStart: "Date de début:",
+                dateDue: "Date d'échéance:",
+                term: "Durée:",
+                attendedBy: "Servi par:",
+                ticketFooter: "Conservez ce ticket pour toute gestion! Vous pouvez effectuer des paiements partiels à tout moment.",
+                days30: "30 jours",
+                notAvailable: "Non disponible",
+                interestRate: "Intérêts",
+                totalPay: "Total à payer:",
+                emissionDate: "Date d'émission:",
+                dueDate: "Date d'échéance:",
+                termLabel: "Durée:",
+                pdfTitle: "TICKET DE NANTISSEMENT",
+                pdfInterest: "Intérêts",
+                pdfTotal: "Total à payer:",
+                pdfTerm: "Durée: 30 jours",
+                pdfAttended: "Servi par:",
+                pdfPhoto: "Photo de l'article:",
+                qrFolio: "Folio:",
+                qrClient: "Client:",
+                qrArticle: "Article:",
+                qrAmount: "Montant:",
+                qrInterest: "Intérêts:",
+                qrTotal: "Total:",
+                qrDate: "Date:",
+                qrDue: "Échéance:",
+                qrAttended: "Servi par:"
+            },
+            it: {
+                user: "Utente:",
+                close: "Chiudi",
+                ticketTitle: "🎫 TICKET DI PEGNO",
+                closeTicket: "Chiudi Ticket",
+                searchTitle: "Ricerca e Storico (RF-7 / CU-4)",
+                searchPlaceholder: "Nome cliente o Folio...",
+                search: "Cerca",
+                resultsFound: "Trovati diversi contratti attivi. Clicca su uno:",
+                paymentTitle: "Pannello di Pagamento e Consegna",
+                folio: "Folio:",
+                client: "Cliente:",
+                article: "Articolo:",
+                total: "Totale da Liquidare (Capitale + Interessi):",
+                interest: "Solo Interessi (Rinnovo):",
+                amountReceived: "Importo ricevuto per pagamento manuale ($):",
+                liquidate: "CU-3: LIQUIDARE (Finalizzare e Consegnare)",
+                payRenew: "CU-2: PAGARE RINNOVO / VERSAMENTO",
+                auction: "CU-5: ESEGUIRE ASTA",
+                backToList: "⬅️ Torna ai risultati",
+                closePanel: "Chiudi Pannello",
+                newPawn: "Nuovo Pegno (CU-1)",
+                namePlaceholder: "Nome completo",
+                inePlaceholder: "N° ID (13 cifre)",
+                phonePlaceholder: "Telefono (10 cifre, opzionale)",
+                articlePlaceholder: "Descrizione dettagliata dell'articolo...",
+                amountPlaceholder: "Importo del prestito $",
+                generateContract: "RF-5: GENERA CONTRATTO",
+                reports: "Report e Inventario (RF-9, 11, 12)",
+                inventory: "RF-12: Inventario in Magazzino",
+                expired: "RF-11: Allarmi Scaduti",
+                auctionList: "CU-5: Lista Aste",
+                cashier: "RF-9: Chiusura Cassa",
+                tickets: "Ticket",
+                exportContracts: "Esporta Contratti in Excel",
+                graficas: "📊 Vedi Grafici",
+                reportsPlaceholder: "I report selezionati appariranno qui...",
+                graficasTitle: "📊 Pannello Grafici",
+                metricLabel: "Seleziona metrica:",
+                chartTypeLabel: "Tipo grafico:",
+                estados: "📊 Contratti per Stato",
+                evolucion: "📈 Evoluzione Pegni nel Tempo",
+                montos: "💰 Distribuzione Importi",
+                topclientes: "🏆 Top Clienti",
+                pagos: "💵 Proporzione Pagamenti vs Debito",
+                // Ticket labels (mantener igual)
+                folioTicket: "Folio:",
+                clientTicket: "Cliente:",
+                articleTicket: "Articolo:",
+                amountTicket: "Importo del prestito:",
+                interestTicket: "Interessi",
+                totalTicket: "Totale da pagare alla scadenza (30 giorni):",
+                dateStart: "Data inizio:",
+                dateDue: "Data scadenza:",
+                term: "Termine:",
+                attendedBy: "Servito da:",
+                ticketFooter: "Conserva questo ticket per qualsiasi gestione! Puoi effettuare pagamenti parziali in qualsiasi momento.",
+                days30: "30 giorni",
+                notAvailable: "Non disponibile",
+                interestRate: "Interessi",
+                totalPay: "Totale da pagare:",
+                emissionDate: "Data emissione:",
+                dueDate: "Data scadenza:",
+                termLabel: "Termine:",
+                pdfTitle: "TICKET DI PEGNO",
+                pdfInterest: "Interessi",
+                pdfTotal: "Totale da pagare:",
+                pdfTerm: "Termine: 30 giorni",
+                pdfAttended: "Servito da:",
+                pdfPhoto: "Foto dell'articolo:",
+                qrFolio: "Folio:",
+                qrClient: "Cliente:",
+                qrArticle: "Articolo:",
+                qrAmount: "Importo:",
+                qrInterest: "Interessi:",
+                qrTotal: "Totale:",
+                qrDate: "Data:",
+                qrDue: "Scadenza:",
+                qrAttended: "Servito da:"
+            },
+            de: {
+                user: "Benutzer:",
+                close: "Schließen",
+                ticketTitle: "🎫 PFANDTICKET",
+                closeTicket: "Ticket schließen",
+                searchTitle: "Suche und Verlauf (RF-7 / CU-4)",
+                searchPlaceholder: "Kundenname oder Folio...",
+                search: "Suchen",
+                resultsFound: "Mehrere aktive Verträge gefunden. Klicken Sie auf einen:",
+                paymentTitle: "Zahlungs- und Übergabebereich",
+                folio: "Folio:",
+                client: "Kunde:",
+                article: "Artikel:",
+                total: "Gesamtbetrag zur Tilgung (Kapital + Zinsen):",
+                interest: "Nur Zinsen (Verlängerung):",
+                amountReceived: "Erhaltener Betrag für manuelle Zahlung ($):",
+                liquidate: "CU-3: TILGEN (Abschließen und Übergeben)",
+                payRenew: "CU-2: VERLÄNGERUNG / RATENZAHLUNG",
+                auction: "CU-5: VERSTEIGERUNG DURCHFÜHREN",
+                backToList: "⬅️ Zurück zu Ergebnissen",
+                closePanel: "Panel schließen",
+                newPawn: "Neues Pfand (CU-1)",
+                namePlaceholder: "Vollständiger Name",
+                inePlaceholder: "Ausweisnummer (13 Ziffern)",
+                phonePlaceholder: "Telefon (10 Ziffern, optional)",
+                articlePlaceholder: "Detaillierte Artikelbeschreibung...",
+                amountPlaceholder: "Darlehensbetrag $",
+                generateContract: "RF-5: VERTRAG ERSTELLEN",
+                reports: "Berichte und Inventar (RF-9, 11, 12)",
+                inventory: "RF-12: Lagerbestand",
+                expired: "RF-11: Abgelaufene Warnungen",
+                auctionList: "CU-5: Versteigerungsliste",
+                cashier: "RF-9: Kassenabschluss",
+                tickets: "Tickets",
+                exportContracts: "Verträge nach Excel exportieren",
+                graficas: "📊 Diagramme anzeigen",
+                reportsPlaceholder: "Ausgewählte Berichte werden hier angezeigt...",
+                graficasTitle: "📊 Diagramm-Panel",
+                metricLabel: "Metrik auswählen:",
+                chartTypeLabel: "Diagrammtyp:",
+                estados: "📊 Verträge nach Status",
+                evolucion: "📈 Entwicklung der Pfandleihen",
+                montos: "💰 Verteilung der Darlehensbeträge",
+                topclientes: "🏆 Top-Kunden",
+                pagos: "💵 Verhältnis Zahlungen vs Schulden",
+                // Ticket labels (mantener igual)
+                folioTicket: "Folio:",
+                clientTicket: "Kunde:",
+                articleTicket: "Artikel:",
+                amountTicket: "Darlehensbetrag:",
+                interestTicket: "Zinsen",
+                totalTicket: "Gesamtbetrag bei Fälligkeit (30 Tage):",
+                dateStart: "Startdatum:",
+                dateDue: "Fälligkeitsdatum:",
+                term: "Laufzeit:",
+                attendedBy: "Bedient von:",
+                ticketFooter: "Bewahren Sie dieses Ticket für alle Verwaltungsvorgänge auf! Sie können jederzeit Teilzahlungen leisten.",
+                days30: "30 Tage",
+                notAvailable: "Nicht verfügbar",
+                interestRate: "Zinsen",
+                totalPay: "Gesamtbetrag:",
+                emissionDate: "Ausstellungsdatum:",
+                dueDate: "Fälligkeitsdatum:",
+                termLabel: "Laufzeit:",
+                pdfTitle: "PFANDTICKET",
+                pdfInterest: "Zinsen",
+                pdfTotal: "Gesamtbetrag:",
+                pdfTerm: "Laufzeit: 30 Tage",
+                pdfAttended: "Bedient von:",
+                pdfPhoto: "Foto des Artikels:",
+                qrFolio: "Folio:",
+                qrClient: "Kunde:",
+                qrArticle: "Artikel:",
+                qrAmount: "Betrag:",
+                qrInterest: "Zinsen:",
+                qrTotal: "Gesamt:",
+                qrDate: "Datum:",
+                qrDue: "Fälligkeit:",
+                qrAttended: "Bedient von:"
+            }
+        };
+
+        function updateLanguage() {
+            const t = translations[currentLang];
+            if (!t) return;
+            
+            // Actualizar textos estáticos
+            document.getElementById('header-user-label').innerText = t.user;
+            document.getElementById('ticket-title').innerText = t.ticketTitle;
+            document.getElementById('btn-cerrar-ticket').innerText = t.closeTicket;
+            document.getElementById('section-search-title').innerText = t.searchTitle;
+            document.getElementById('input-busqueda').placeholder = t.searchPlaceholder;
+            document.getElementById('btn-buscar').innerText = t.search;
+            document.getElementById('results-label').innerText = t.resultsFound;
+            document.getElementById('payment-title').innerText = t.paymentTitle;
+            document.getElementById('folio-label').innerHTML = t.folio;
+            document.getElementById('client-label').innerHTML = t.client;
+            document.getElementById('article-label').innerHTML = t.article;
+            document.getElementById('total-label').innerHTML = t.total;
+            document.getElementById('interest-label').innerHTML = t.interest;
+            document.getElementById('amount-label').innerHTML = t.amountReceived;
+            document.getElementById('btn-liquidar').innerHTML = t.liquidate;
+            document.getElementById('btn-abono-refrendo').innerHTML = t.payRenew;
+            document.getElementById('btn-remate').innerHTML = t.auction;
+            document.getElementById('btn-volver-lista').innerHTML = t.backToList;
+            document.getElementById('close-panel-btn').innerHTML = t.closePanel;
+            document.getElementById('new-pawn-title').innerHTML = t.newPawn;
+            document.getElementById('nom-cli').placeholder = t.namePlaceholder;
+            document.getElementById('id-cli').placeholder = t.inePlaceholder;
+            document.getElementById('tel-cli').placeholder = t.phonePlaceholder;
+            document.getElementById('art-desc').placeholder = t.articlePlaceholder;
+            document.getElementById('monto-p').placeholder = t.amountPlaceholder;
+            document.getElementById('generate-contract-btn').innerHTML = t.generateContract;
+            document.getElementById('reports-title').innerHTML = t.reports;
+            document.getElementById('btn-inventario').innerHTML = t.inventory;
+            document.getElementById('btn-vencimientos').innerHTML = t.expired;
+            document.getElementById('btn-ver-remates').innerHTML = t.auctionList;
+            document.getElementById('btn-caja').innerHTML = t.cashier;
+            document.getElementById('btn-tickets').innerHTML = t.tickets;
+            document.getElementById('btn-exportar-contratos').innerHTML = t.exportContracts;
+            document.getElementById('btn-graficas').innerHTML = t.graficas;
+            document.getElementById('reports-placeholder').innerHTML = t.reportsPlaceholder;
+            document.getElementById('graficas-title').innerHTML = t.graficasTitle;
+            document.getElementById('metric-label').innerHTML = t.metricLabel;
+            document.getElementById('chart-type-label').innerHTML = t.chartTypeLabel;
+            
+            // Actualizar opciones del select de métricas
+            const metricSelect = document.getElementById('metric-select');
+            if (metricSelect) {
+                metricSelect.options[0].text = t.estados;
+                metricSelect.options[1].text = t.evolucion;
+                metricSelect.options[2].text = t.montos;
+                metricSelect.options[3].text = t.topclientes;
+                metricSelect.options[4].text = t.pagos;
+            }
+        }
+
+        // Escuchar cambio de idioma
+        document.getElementById('language-select').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            updateLanguage();
+        });
+
+        // ========== FUNCIONES DE CÁMARA ==========
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas-foto');
+        const btnActivarCamara = document.getElementById('btn-activar-camara');
+        const btnTomarFoto = document.getElementById('btn-tomar-foto');
+        const btnCancelarCamara = document.getElementById('btn-cancelar-camara');
+        const fotoPreview = document.getElementById('foto-preview');
+
+        async function activarCamara() {
+            try {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.style.display = 'block';
+                btnActivarCamara.style.display = 'none';
+                btnTomarFoto.style.display = 'inline-block';
+                btnCancelarCamara.style.display = 'inline-block';
+            } catch (err) {
+                alert('Error al acceder a la cámara: ' + err.message);
+            }
+        }
+
+        function tomarFoto() {
+            if (!stream) {
+                alert('Primero active la cámara');
+                return;
+            }
+            
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convertir a base64
+            fotoTomada = canvas.toDataURL('image/jpeg', 0.8);
+            fotoPreview.src = fotoTomada;
+            fotoPreview.style.display = 'block';
+            
+            // Detener la cámara
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.style.display = 'none';
+            btnActivarCamara.style.display = 'inline-block';
+            btnTomarFoto.style.display = 'none';
+            btnCancelarCamara.style.display = 'none';
+        }
+
+        function cancelarCamara() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.style.display = 'none';
+            btnActivarCamara.style.display = 'inline-block';
+            btnTomarFoto.style.display = 'none';
+            btnCancelarCamara.style.display = 'none';
+            fotoPreview.style.display = 'none';
+            fotoTomada = null;
+        }
+
+        btnActivarCamara.addEventListener('click', activarCamara);
+        btnTomarFoto.addEventListener('click', tomarFoto);
+        btnCancelarCamara.addEventListener('click', cancelarCamara);
+
+        // ========== FUNCIONES DE GRÁFICAS ==========
+        async function obtenerDatosGraficas() {
+            const empeniosSnap = await getDocs(collection(db, "empeños"));
+            const transaccionesSnap = await getDocs(collection(db, "transacciones"));
+            const empenios = [];
+            empeniosSnap.forEach(doc => empenios.push({ id: doc.id, ...doc.data() }));
+            
+            let transacciones = [];
+            transaccionesSnap.forEach(doc => transacciones.push(doc.data()));
+            
+            // Datos por estado
+            const estados = {};
+            empenios.forEach(e => {
+                const estado = e.estado || "Desconocido";
+                estados[estado] = (estados[estado] || 0) + 1;
+            });
+            
+            // Evolución temporal (por mes)
+            const evolucion = {};
+            empenios.forEach(e => {
+                if (e.fechaInicio) {
+                    const fecha = new Date(e.fechaInicio.seconds * 1000);
+                    const mesAnio = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+                    evolucion[mesAnio] = (evolucion[mesAnio] || 0) + 1;
+                }
+            });
+            
+            // Distribución de montos
+            const rangos = {
+                "0-500": 0, "501-1000": 0, "1001-2000": 0, "2001-5000": 0, "5000+": 0
+            };
+            empenios.forEach(e => {
+                const monto = e.monto || 0;
+                if (monto <= 500) rangos["0-500"]++;
+                else if (monto <= 1000) rangos["501-1000"]++;
+                else if (monto <= 2000) rangos["1001-2000"]++;
+                else if (monto <= 5000) rangos["2001-5000"]++;
+                else rangos["5000+"]++;
+            });
+            
+            // Top clientes
+            const clientes = {};
+            empenios.forEach(e => {
+                const cliente = e.cliente || "Anónimo";
+                clientes[cliente] = (clientes[cliente] || 0) + 1;
+            });
+            const topClientes = Object.entries(clientes).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            
+            // Pagos vs Deuda
+            let totalPagado = 0;
+            transacciones.forEach(t => {
+                totalPagado += t.monto || 0;
+            });
+            let totalPrestado = 0;
+            empenios.forEach(e => {
+                totalPrestado += (e.monto || 0);
+            });
+            
+            return { estados, evolucion, rangos, topClientes, totalPagado, totalPrestado };
+        }
+        
+        async function renderGrafica() {
+            const metric = document.getElementById('metric-select').value;
+            const chartType = document.getElementById('chart-type-select').value;
+            const data = await obtenerDatosGraficas();
+            
+            let labels = [];
+            let values = [];
+            let labelTitle = "";
+            
+            switch(metric) {
+                case 'estados':
+                    labels = Object.keys(data.estados);
+                    values = Object.values(data.estados);
+                    labelTitle = "Contratos por Estado";
+                    break;
+                case 'evolucion':
+                    labels = Object.keys(data.evolucion).sort();
+                    values = labels.map(l => data.evolucion[l]);
+                    labelTitle = "Empeños por Mes";
+                    break;
+                case 'montos':
+                    labels = Object.keys(data.rangos);
+                    values = Object.values(data.rangos);
+                    labelTitle = "Distribución de Montos";
+                    break;
+                case 'topclientes':
+                    labels = data.topClientes.map(c => c[0]);
+                    values = data.topClientes.map(c => c[1]);
+                    labelTitle = "Top Clientes";
+                    break;
+                case 'pagos':
+                    labels = ["Pagado", "Pendiente"];
+                    values = [data.totalPagado, data.totalPrestado - data.totalPagado];
+                    labelTitle = "Pagos vs Deuda";
+                    break;
+            }
+            
+            const ctx = document.getElementById('grafica-canvas').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            
+            const isPieOrDoughnut = chartType === 'pie' || chartType === 'doughnut';
+            
+            chartInstance = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelTitle,
+                        data: values,
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(199, 199, 199, 0.7)'
+                        ],
+                        borderColor: 'rgba(0,0,0,0.8)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: labelTitle }
+                    }
+                }
+            });
+        }
+        
+        function abrirModalGraficas() {
+            const modal = document.getElementById('modal-graficas');
+            modal.style.display = 'flex';
+            renderGrafica();
+        }
+        
+        function cerrarModalGraficas() {
+            const modal = document.getElementById('modal-graficas');
+            modal.style.display = 'none';
+        }
+        
+        // ========== RESTO DEL CÓDIGO ORIGINAL (con modificaciones para la foto) ==========
+        async function cargarConfiguracion() {
+            try {
+                const docSnap = await getDoc(doc(db, "configuracion", "interes"));
+                if (docSnap.exists()) {
+                    tasaInteresActual = docSnap.data().valor;
+                }
+                actualizarTextoCalculo(0);
+            } catch (error) {
+                console.error("Error al obtener tasa:", error);
+            }
+        }
+
+        function actualizarTextoCalculo(monto) {
+            const interes = monto * (tasaInteresActual / 100);
+            const total = monto + interes;
+            document.getElementById('display-calculo').innerText = 
+                `Interés (${tasaInteresActual}%): $${interes.toFixed(2)} | Total: $${total.toFixed(2)}`;
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const snap = await getDoc(doc(db, "usuarios", user.uid));
+                if(snap.exists()) {
+                    const nombre = snap.data().nombre;
+                    const rol = snap.data().rol ? snap.data().rol.toLowerCase() : "cajero";
+                    document.getElementById('user-display-name').innerText = nombre;
+                    nombreUsuarioActual = nombre;
+                    rolUsuarioActual = rol;
+                }
+                await cargarConfiguracion();
+            } else { window.location.href = "login.html"; }
+        });
+
+        function limpiarInterfazPago() {
+            document.getElementById('apartado-pago').style.display = "none";
+            document.getElementById('lista-resultados').style.display = "none";
+            document.getElementById('input-busqueda').value = "";
+            document.getElementById('monto-recibido').value = "";
+            document.getElementById('contenedor-cards').innerHTML = "";
+        }
+
+        document.getElementById('monto-p').oninput = (e) => {
+            actualizarTextoCalculo(parseFloat(e.target.value) || 0);
+        };
+
+        function mostrarTicket(datos, fotoBase64 = null) {
+            const t = translations[currentLang];
+            const ticketDiv = document.getElementById('ticket-contenido');
+            const fechaInicio = new Date().toLocaleDateString();
+            const fechaVenc = new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString();
+            ticketDiv.innerHTML = `
+                <div class="ticket-line"><span>${t.folioTicket}</span> <strong>${datos.folio}</strong></div>
+                <div class="ticket-line"><span>${t.clientTicket}</span> ${datos.cliente}</div>
+                <div class="ticket-line"><span>${t.articleTicket}</span> ${datos.articulo}</div>
+                <div class="ticket-line"><span>${t.amountTicket}</span> $${datos.monto.toFixed(2)}</div>
+                <div class="ticket-line"><span>${t.interestTicket} (${datos.tasa}%):</span> $${datos.interes.toFixed(2)}</div>
+                <div class="ticket-total">${t.totalTicket} $${(datos.monto + datos.interes).toFixed(2)}</div>
+                <div class="ticket-line"><span>${t.dateStart}</span> ${fechaInicio}</div>
+                <div class="ticket-line"><span>${t.dateDue}</span> ${fechaVenc}</div>
+                <div class="ticket-line"><span>${t.term}</span> ${t.days30}</div>
+                <div class="ticket-line"><span>${t.attendedBy}</span> ${datos.atendidoPor}</div>
+                <p style="text-align:center; margin-top:15px;">${t.ticketFooter}</p>
+            `;
+
+            const qrContainer = document.getElementById('ticket-qr');
+            qrContainer.innerHTML = '';
+            const qrData = `${t.qrFolio} ${datos.folio}\n${t.qrClient} ${datos.cliente}\n${t.qrArticle} ${datos.articulo}\n${t.qrAmount} $${datos.monto.toFixed(2)}\n${t.qrInterest} $${datos.interes.toFixed(2)}\n${t.qrTotal} $${(datos.monto + datos.interes).toFixed(2)}\n${t.qrDate} ${fechaInicio}\n${t.qrDue} ${fechaVenc}\n${t.qrAttended} ${datos.atendidoPor}`;
+            
+            const qr = qrcode(0, 'M');
+            qr.addData(qrData);
+            qr.make();
+            
+            const canvasQR = document.createElement('canvas');
+            const moduleSize = 5;
+            canvasQR.width = qr.getModuleCount() * moduleSize;
+            canvasQR.height = qr.getModuleCount() * moduleSize;
+            const ctxQR = canvasQR.getContext('2d');
+            
+            for (let row = 0; row < qr.getModuleCount(); row++) {
+                for (let col = 0; col < qr.getModuleCount(); col++) {
+                    ctxQR.fillStyle = qr.isDark(row, col) ? '#000' : '#fff';
+                    ctxQR.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
+                }
+            }
+            
+            qrContainer.appendChild(canvasQR);
+            
+            // Mostrar la foto si existe
+            const fotoContainer = document.getElementById('ticket-foto');
+            if (fotoBase64) {
+                fotoContainer.innerHTML = `<img src="${fotoBase64}" class="ticket-foto-img" alt="Foto del artículo"><br><small>${t.pdfPhoto}</small>`;
+            } else {
+                fotoContainer.innerHTML = '';
+            }
+            
+            document.getElementById('ticket-panel').style.display = 'block';
+        }
+
+        document.getElementById('btn-cerrar-ticket').onclick = () => {
+            document.getElementById('ticket-panel').style.display = 'none';
+        };
+
+        document.getElementById('form-registro').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nom-cli').value.trim();
+            const ine = document.getElementById('id-cli').value.trim();
+            const telefono = document.getElementById('tel-cli').value.trim();
+            const monto = parseFloat(document.getElementById('monto-p').value);
+
+            if (telefono !== "" && !/^\d{10}$/.test(telefono)) {
+                alert("El teléfono debe contener exactamente 10 dígitos numéricos o estar vacío.");
+                return;
+            }
+
+            try {
+                const qIne = query(collection(db, "empeños"), where("identificacion", "==", ine));
+                const snapshotIne = await getDocs(qIne);
+                let ineRepetidaConDiferenteNombre = false;
+                snapshotIne.forEach(doc => {
+                    if (doc.data().cliente !== nombre) ineRepetidaConDiferenteNombre = true;
+                });
+                if (ineRepetidaConDiferenteNombre) {
+                    alert("Error: El número de INE ya está registrado con un nombre diferente.");
+                    return;
+                }
+
+                if (telefono !== "") {
+                    const qTel = query(collection(db, "empeños"), where("telefono", "==", telefono));
+                    const snapshotTel = await getDocs(qTel);
+                    let telefonoRepetidoConDiferenteNombre = false;
+                    snapshotTel.forEach(doc => {
+                        if (doc.data().cliente !== nombre) telefonoRepetidoConDiferenteNombre = true;
+                    });
+                    if (telefonoRepetidoConDiferenteNombre) {
+                        alert("Error: El número de teléfono ya está registrado con un nombre diferente.");
+                        return;
+                    }
+                }
+
+                const folio = "F-" + Date.now().toString().slice(-6);
+                const interes = monto * (tasaInteresActual / 100);
+                
+                const empenioData = {
+                    folio, cliente: nombre, identificacion: ine, telefono: telefono || null,
+                    articulo: document.getElementById('art-desc').value.trim(),
+                    monto, tasaPactada: tasaInteresActual, interes, estado: "Vigente",
+                    fechaInicio: serverTimestamp(),
+                    fechaVencimiento: new Date(Date.now() + 30*24*60*60*1000)
+                };
+                await addDoc(collection(db, "empeños"), empenioData);
+
+                const inventarioData = {
+                    folioEmpeño: folio,
+                    descripcion: document.getElementById('art-desc').value.trim(),
+                    fechaIngreso: serverTimestamp(),
+                    estado: "En bodega"
+                };
+                await addDoc(collection(db, "inventario"), inventarioData);
+                
+                // Guardar la foto si se tomó
+                let fotoGuardada = null;
+                if (fotoTomada) {
+                    const fotoDoc = await addDoc(collection(db, "fotos_empeños"), {
+                        folio: folio,
+                        imagen: fotoTomada,
+                        fecha: serverTimestamp()
+                    });
+                    fotoGuardada = fotoTomada;
+                }
+
+                const atendidoPor = `${rolUsuarioActual === 'admin' ? 'Admin' : 'Cajero'}: ${nombreUsuarioActual}`;
+                const ticketData = {
+                    folio, cliente: empenioData.cliente, articulo: empenioData.articulo,
+                    monto, interes, tasa: tasaInteresActual,
+                    fechaEmision: serverTimestamp(),
+                    fechaVencimiento: empenioData.fechaVencimiento,
+                    atendidoPor,
+                    tieneFoto: !!fotoTomada
+                };
+                await addDoc(collection(db, "tickets"), ticketData);
+
+                mostrarTicket({
+                    folio, cliente: empenioData.cliente, articulo: empenioData.articulo,
+                    monto, interes, tasa: tasaInteresActual, atendidoPor
+                }, fotoGuardada);
+
+                alert("Empeño guardado correctamente con tasa del " + tasaInteresActual + "%"); 
+                e.target.reset();
+                actualizarTextoCalculo(0);
+                cancelarCamara(); // Limpiar la cámara
+                fotoTomada = null;
+            } catch (err) { 
+                alert(err.message); 
+            }
+        };
+
+        async function generarPDF(ticket) {
+            const t = translations[currentLang];
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(16);
+            doc.text(t.pdfTitle, 20, 20);
+            doc.setFontSize(12);
+            doc.text(`${t.folioTicket} ${ticket.folio}`, 20, 30);
+            doc.text(`${t.clientTicket} ${ticket.cliente}`, 20, 40);
+            doc.text(`${t.articleTicket} ${ticket.articulo}`, 20, 50);
+            doc.text(`${t.amountTicket} $${ticket.monto.toFixed(2)}`, 20, 60);
+            doc.text(`${t.pdfInterest} (${ticket.tasa}%): $${ticket.interes.toFixed(2)}`, 20, 70);
+            doc.text(`${t.pdfTotal} $${(ticket.monto + ticket.interes).toFixed(2)}`, 20, 80);
+            
+            let fechaEmision = ticket.fechaEmision ? new Date(ticket.fechaEmision.seconds * 1000) : new Date();
+            let fechaVenc = ticket.fechaVencimiento ? new Date(ticket.fechaVencimiento.seconds * 1000) : new Date(Date.now() + 30*24*60*60*1000);
+            
+            doc.text(`${t.emissionDate} ${fechaEmision.toLocaleDateString()}`, 20, 90);
+            doc.text(`${t.dueDate} ${fechaVenc.toLocaleDateString()}`, 20, 100);
+            doc.text(`${t.termLabel} ${t.days30}`, 20, 110);
+            
+            const atendido = ticket.atendidoPor ? ticket.atendidoPor : t.notAvailable;
+            doc.text(`${t.pdfAttended} ${atendido}`, 20, 120);
+
+            // Buscar la foto en Firestore si el ticket tiene foto
+            let fotoBase64 = null;
+            if (ticket.tieneFoto) {
+                try {
+                    const fotosQuery = query(collection(db, "fotos_empeños"), where("folio", "==", ticket.folio));
+                    const fotosSnap = await getDocs(fotosQuery);
+                    if (!fotosSnap.empty) {
+                        fotoBase64 = fotosSnap.docs[0].data().imagen;
+                    }
+                } catch (err) {
+                    console.error("Error al cargar la foto:", err);
+                }
+            }
+
+            // Agregar la foto al PDF si existe
+            let yPosition = 130;
+            if (fotoBase64) {
+                doc.text(`${t.pdfPhoto}`, 20, yPosition);
+                yPosition += 10;
+                try {
+                    // Añadir la imagen al PDF (ajustar tamaño según necesidad)
+                    doc.addImage(fotoBase64, 'JPEG', 20, yPosition, 60, 60);
+                    yPosition += 70;
+                } catch (err) {
+                    console.error("Error al añadir imagen al PDF:", err);
+                }
+            }
+
+            const qrData = `${t.qrFolio} ${ticket.folio}\n${t.qrClient} ${ticket.cliente}\n${t.qrArticle} ${ticket.articulo}\n${t.qrAmount} $${ticket.monto.toFixed(2)}\n${t.qrInterest} $${ticket.interes.toFixed(2)}\n${t.qrTotal} $${(ticket.monto + ticket.interes).toFixed(2)}\n${t.qrDate} ${fechaEmision.toLocaleDateString()}\n${t.qrDue} ${fechaVenc.toLocaleDateString()}\n${t.qrAttended} ${atendido}`;
+            
+            const qr = qrcode(0, 'M');
+            qr.addData(qrData);
+            qr.make();
+            
+            const canvasQR = document.createElement('canvas');
+            const moduleSize = 4;
+            canvasQR.width = qr.getModuleCount() * moduleSize;
+            canvasQR.height = qr.getModuleCount() * moduleSize;
+            const ctxQR = canvasQR.getContext('2d');
+            
+            for (let row = 0; row < qr.getModuleCount(); row++) {
+                for (let col = 0; col < qr.getModuleCount(); col++) {
+                    ctxQR.fillStyle = qr.isDark(row, col) ? '#000' : '#fff';
+                    ctxQR.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
+                }
+            }
+            
+            const imgData = canvasQR.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 20, yPosition, 50, 50);
+            
+            doc.save(`ticket_${ticket.folio}.pdf`);
+        }
+
+        async function listarTickets() {
+            const reportesDiv = document.getElementById('display-reportes');
+            const t = translations[currentLang];
+            reportesDiv.innerHTML = '<em>Cargando tickets...</em>';
+            try {
+                const q = query(collection(db, "tickets"), orderBy("fechaEmision", "desc"));
+                const snap = await getDocs(q);
+                if (snap.empty) {
+                    reportesDiv.innerHTML = '<em>No hay tickets guardados.</em>';
+                    return;
+                }
+                let html = '<b>TICKETS GUARDADOS:</b><br>';
+                snap.forEach(docSnap => {
+                    const ticket = docSnap.data();
+                    const ticketId = docSnap.id;
+                    html += `
+                        <div class="ticket-item">
+                            <span>${ticket.folio} - ${ticket.cliente} (${new Date(ticket.fechaEmision?.seconds*1000).toLocaleDateString()})</span>
+                            <button class="btn-descargar" data-ticket-id="${ticketId}">${t.tickets}</button>
+                        </div>
+                    `;
+                });
+                reportesDiv.innerHTML = html;
+
+                document.querySelectorAll('.btn-descargar').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const ticketId = e.target.getAttribute('data-ticket-id');
+                        const ticketDoc = await getDoc(doc(db, "tickets", ticketId));
+                        if (ticketDoc.exists()) {
+                            generarPDF(ticketDoc.data());
+                        } else {
+                            alert("Ticket no encontrado.");
+                        }
+                    });
+                });
+            } catch (error) {
+                reportesDiv.innerHTML = `<em>Error al cargar tickets: ${error.message}</em>`;
+            }
+        }
+
+        document.getElementById('btn-tickets').addEventListener('click', listarTickets);
+
+        async function exportarContratosExcel() {
+            const reportesDiv = document.getElementById('display-reportes');
+            reportesDiv.innerHTML = '<em>Generando archivo Excel...</em>';
+            try {
+                const querySnapshot = await getDocs(collection(db, "empeños"));
+                if (querySnapshot.empty) {
+                    reportesDiv.innerHTML = '<em>No hay contratos para exportar.</em>';
+                    return;
+                }
+
+                const columnas = ['INE', 'Nombre del cliente', 'Monto', 'Interés del contrato', 'Objeto', 'Período del contrato', 'Estado'];
+
+                const filas = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const fechaInicio = data.fechaInicio ? new Date(data.fechaInicio.seconds * 1000).toLocaleDateString() : '';
+                    const fechaVenc = data.fechaVencimiento ? new Date(data.fechaVencimiento.seconds * 1000).toLocaleDateString() : '';
+                    const periodo = `${fechaInicio} - ${fechaVenc}`;
+                    
+                    const fila = [
+                        data.identificacion || '',
+                        data.cliente || '',
+                        data.monto || 0,
+                        data.interes || 0,
+                        data.articulo || '',
+                        periodo,
+                        data.estado || ''
+                    ];
+                    filas.push(fila);
+                });
+
+                let csvContent = columnas.map(col => `"${col.replace(/"/g, '""')}"`).join(',') + '\n';
+                filas.forEach(fila => {
+                    const filaEscapada = fila.map(campo => `"${String(campo).replace(/"/g, '""')}"`).join(',');
+                    csvContent += filaEscapada + '\n';
+                });
+
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.setAttribute('download', 'contratos_empeños.xls');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                reportesDiv.innerHTML = '<em>Archivo Excel generado correctamente.</em>';
+            } catch (error) {
+                reportesDiv.innerHTML = `<em>Error al exportar: ${error.message}</em>`;
+            }
+        }
+
+        document.getElementById('btn-exportar-contratos').addEventListener('click', exportarContratosExcel);
+        
+        // ========== EVENTOS DE GRÁFICAS ==========
+        document.getElementById('btn-graficas').addEventListener('click', abrirModalGraficas);
+        document.getElementById('btn-cerrar-modal').addEventListener('click', cerrarModalGraficas);
+        document.getElementById('metric-select').addEventListener('change', renderGrafica);
+        document.getElementById('chart-type-select').addEventListener('change', renderGrafica);
+        
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('modal-graficas');
+            if (e.target === modal) cerrarModalGraficas();
+        });
+
+        // ========== RESTO DEL CÓDIGO (buscador, pagos, reportes) ==========
+        document.getElementById('btn-buscar').onclick = async () => {
+            const txt = document.getElementById('input-busqueda').value.trim();
+            if(!txt) return alert("Ingresa un dato para buscar.");
+            document.getElementById('lista-resultados').style.display = "none";
+            document.getElementById('apartado-pago').style.display = "none";
+            document.getElementById('contenedor-cards').innerHTML = "";
+
+            try {
+                const qFolio = query(collection(db, "empeños"), where("folio", "==", txt));
+                const qNombre = query(collection(db, "empeños"), where("cliente", "==", txt));
+                const [snapF, snapN] = await Promise.all([getDocs(qFolio), getDocs(qNombre)]);
+                let resultados = [];
+                snapF.forEach(doc => resultados.push({ id: doc.id, ...doc.data() }));
+                snapN.forEach(doc => { if (!resultados.find(r => r.id === doc.id)) resultados.push({ id: doc.id, ...doc.data() }); });
+                const activos = resultados.filter(r => !["Finalizado", "Vendido"].includes(r.estado));
+                if (activos.length === 0) return alert("Sin contratos vigentes.");
+
+                if (activos.length === 1) {
+                    abrirPanelPago(activos[0]);
+                } else {
+                    document.getElementById('lista-resultados').style.display = "block";
+                    activos.forEach(contrato => {
+                        const div = document.createElement('div');
+                        div.className = "card-seleccion";
+                        div.innerHTML = `<strong>Folio: ${contrato.folio}</strong> | Artículo: ${contrato.articulo}`;
+                        div.onclick = () => {
+                            document.getElementById('lista-resultados').style.display = "none";
+                            abrirPanelPago(contrato);
+                        };
+                        document.getElementById('contenedor-cards').appendChild(div);
+                    });
+                }
+            } catch (err) { alert(err.message); }
+        };
+
+        function abrirPanelPago(d) {
+            idSeleccionado = d.id;
+            datosSeleccionados = d;
+            document.getElementById('apartado-pago').style.display = "block";
+            document.getElementById('folio-operacion').innerText = d.folio;
+            document.getElementById('cliente-operacion').innerText = d.cliente;
+            document.getElementById('articulo-operacion').innerText = d.articulo;
+            document.getElementById('interes-cobrar').innerText = `$${d.interes.toFixed(2)}`;
+            document.getElementById('total-cobrar').innerText = `$${(d.monto + d.interes).toFixed(2)}`;
+            const tieneMasResultados = document.getElementById('contenedor-cards').children.length > 0;
+            document.getElementById('btn-volver-lista').style.display = tieneMasResultados ? "inline-block" : "none";
+        }
+
+        document.getElementById('btn-volver-lista').onclick = () => {
+            document.getElementById('apartado-pago').style.display = "none";
+            document.getElementById('lista-resultados').style.display = "block";
+        };
+
+        document.getElementById('btn-liquidar').onclick = async () => {
+            const total = datosSeleccionados.monto + datosSeleccionados.interes;
+            if(confirm(`¿Liquidar total por $${total.toFixed(2)}?`)) {
+                try {
+                    await updateDoc(doc(db, "empeños", idSeleccionado), { estado: "Finalizado", monto: 0, interes: 0 });
+                    await addDoc(collection(db, "transacciones"), { folio: datosSeleccionados.folio, monto: total, tipo: "Liquidación", fecha: serverTimestamp() });
+                    alert("Liquidado con éxito.");
+                    limpiarInterfazPago();
+                } catch (err) { alert(err.message); }
+            }
+        };
+
+        document.getElementById('btn-abono-refrendo').onclick = async () => {
+            const recibido = parseFloat(document.getElementById('monto-recibido').value);
+            const totalDeuda = datosSeleccionados.monto + datosSeleccionados.interes;
+
+            if (!recibido || recibido < datosSeleccionados.interes) {
+                return alert("Monto insuficiente para cubrir al menos el interés ($" + datosSeleccionados.interes.toFixed(2) + ").");
+            }
+
+            try {
+                if (recibido >= totalDeuda) {
+                    const cambio = recibido - totalDeuda;
+                    await updateDoc(doc(db, "empeños", idSeleccionado), { estado: "Finalizado", monto: 0, interes: 0 });
+                    await addDoc(collection(db, "transacciones"), { folio: datosSeleccionados.folio, monto: totalDeuda, tipo: "Liquidación (Abono Total)", fecha: serverTimestamp() });
+                    alert(`¡Contrato Liquidado! \nTotal deuda: $${totalDeuda.toFixed(2)} \nCambio a devolver: $${cambio.toFixed(2)}`);
+                    limpiarInterfazPago();
+                } else {
+                    const abonoAlCapital = recibido - datosSeleccionados.interes;
+                    const nuevaDeuda = datosSeleccionados.monto - abonoAlCapital;
+                    const tasaAUsar = datosSeleccionados.tasaPactada || tasaInteresActual;
+                    
+                    await updateDoc(doc(db, "empeños", idSeleccionado), { 
+                        monto: nuevaDeuda, 
+                        interes: nuevaDeuda * (tasaAUsar / 100), 
+                        estado: "Vigente (Abonado)",
+                        fechaVencimiento: new Date(Date.now() + 30*24*60*60*1000)
+                    });
+
+                    await addDoc(collection(db, "transacciones"), { folio: datosSeleccionados.folio, monto: recibido, tipo: "Abono", fecha: serverTimestamp() });
+                    alert("Abono aplicado con la tasa pactada (" + tasaAUsar + "%).");
+                    limpiarInterfazPago();
+                }
+            } catch (err) { alert(err.message); }
+        };
+
+        document.getElementById('btn-remate').onclick = async () => {
+            if(confirm("¿Enviar este artículo a remate?")) {
+                await updateDoc(doc(db, "empeños", idSeleccionado), { estado: "Listo para Venta" });
+                alert("Enviado a remate.");
+                limpiarInterfazPago();
+            }
+        };
+
+        document.getElementById('btn-inventario').onclick = async () => {
+            const q = query(collection(db, "empeños"), where("estado", "in", ["Vigente", "Vigente (Abonado)"]));
+            const snap = await getDocs(q);
+            let html = "<b>BODEGA:</b><br>";
+            snap.forEach(d => html += `<div class='reporte-item'>📦 ${d.data().articulo} (${d.data().folio})</div>`);
+            document.getElementById('display-reportes').innerHTML = snap.empty ? "Sin artículos en bodega." : html;
+        };
+
+        document.getElementById('btn-vencimientos').onclick = async () => {
+            const snap = await getDocs(collection(db, "empeños"));
+            const hoy = new Date();
+            let html = "<b>VENCIDOS:</b><br>";
+            let contador = 0;
+            snap.forEach(d => {
+                if (d.data().fechaVencimiento) {
+                    const fv = d.data().fechaVencimiento.toDate();
+                    if(fv < hoy && !["Finalizado", "Listo para Venta", "Vendido"].includes(d.data().estado)) {
+                        html += `<div class='reporte-item'>⚠️ ${d.data().folio} - ${d.data().cliente}</div>`;
+                        contador++;
+                    }
+                }
+            });
+            document.getElementById('display-reportes').innerHTML = contador === 0 ? "No hay contratos vencidos." : html;
+        };
+
+        document.getElementById('btn-ver-remates').onclick = async () => {
+            const q = query(collection(db, "empeños"), where("estado", "==", "Listo para Venta"));
+            const snap = await getDocs(q);
+            let html = "<b>REMATES:</b><br>";
+            snap.forEach(d => html += `<div class='reporte-item'>🏷️ ${d.data().articulo} ($${(d.data().monto * 1.5).toFixed(2)})</div>`);
+            document.getElementById('display-reportes').innerHTML = snap.empty ? "Sin remates." : html;
+        };
+
+        document.getElementById('btn-caja').onclick = async () => {
+            const snap = await getDocs(collection(db, "transacciones"));
+            let t = 0; snap.forEach(d => t += d.data().monto);
+            document.getElementById('display-reportes').innerHTML = `<b>Caja Total:</b> $${t.toFixed(2)}`;
+        };
+
+        document.getElementById('btn-logout').onclick = () => signOut(auth);
+    </script>
+</body>
+</html>
